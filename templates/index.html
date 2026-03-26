@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini Table Extractor</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    
+    <main class="container">
+        <header>
+            <div class="logo-container">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z" stroke="url(#paint0_linear)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M3 9H21" stroke="url(#paint1_linear)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9 21V9" stroke="url(#paint2_linear)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="paint0_linear" x1="3" y1="3" x2="21" y2="21" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#4F46E5" />
+                            <stop offset="1" stop-color="#9333EA" />
+                        </linearGradient>
+                        <linearGradient id="paint1_linear" x1="3" y1="9" x2="21" y2="9" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#4F46E5" />
+                            <stop offset="1" stop-color="#9333EA" />
+                        </linearGradient>
+                        <linearGradient id="paint2_linear" x1="9" y1="9" x2="9" y2="21" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#4F46E5" />
+                            <stop offset="1" stop-color="#9333EA" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h1>Gemini Table Extractor</h1>
+            </div>
+            <p>구글 제미나이 공유 링크에서 표를 추출하여 엑셀이나 PPT에 바로 붙여넣으세요.</p>
+        </header>
+
+        <section class="input-section glass-card">
+            <form id="extract-form">
+                <div class="input-group">
+                    <input type="url" id="url-input" placeholder="https://gemini.google.com/share/..." required>
+                    <button type="submit" id="submit-btn">
+                        <span>추출하기</span>
+                        <div class="spinner" id="loading-spinner"></div>
+                    </button>
+                </div>
+            </form>
+            <div id="error-message" class="error hidden"></div>
+        </section>
+
+        <section id="results-section" class="results-section hidden">
+            <header class="results-header">
+                <h2>추출된 표 (<span id="table-count">0</span>)</h2>
+            </header>
+            <div id="tables-container" class="tables-container">
+                <!-- Tables will be injected here -->
+            </div>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
