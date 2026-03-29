@@ -372,8 +372,9 @@ button:disabled {
 /* Version Badge */
 .version-badge {
     position: absolute;
-    top: 1rem;
-    right: 1.5rem;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
     font-size: 0.8rem;
     color: var(--text-muted);
     font-weight: 500;
