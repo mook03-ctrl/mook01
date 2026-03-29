@@ -2,8 +2,17 @@ from flask import Flask, request, jsonify, render_template
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from bs4 import BeautifulSoup
 import traceback
+import urllib.request
 
 app = Flask(__name__)
+
+def resolve_redirects(url):
+    try:
+        req = urllib.request.Request(url, method='HEAD', headers={'User-Agent': 'Mozilla/5.0'})
+        res = urllib.request.urlopen(req, timeout=5)
+        return res.url
+    except Exception:
+        return url
 
 @app.route('/')
 def index():
@@ -16,6 +25,8 @@ def extract():
     
     if not url:
         return jsonify({"error": "URL이 누락되었습니다."}), 400
+        
+    url = resolve_redirects(url)
         
     try:
         html_content = ""
