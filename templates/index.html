@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Extractor</title>
+    <title>AI Extractor</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,9 +16,33 @@
 <body>
     <div class="glass-bg"></div>
     
-    <div class="version-badge">Made by Mook(v.260329)</div>
+    <div class="version-badge">Copyright 2026 Mook, v0.3 (260329)</div>
     
     <div class="layout-wrapper">
+        <div class="top-left-container">
+            <div class="menu-icon-wrapper">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="hamburger-icon">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+                <div class="menu-dropdown hidden"></div>
+            </div>
+            <div id="welcome-container" style="display: none;">
+                <span id="welcome-msg" class="welcome-text"></span>
+            </div>
+        </div>
+        <nav class="auth-bar">
+            <div class="nav-links" id="nav-unauth" style="display: none;">
+                <button class="nav-btn" onclick="openModal('history-modal')">History</button>
+                <button class="nav-btn" onclick="openModal('login-modal')">Sign In</button>
+                <button class="nav-btn" onclick="openModal('signup-modal')">Sign Up</button>
+            </div>
+            <div class="nav-links" id="nav-auth" style="display: none;">
+                <button class="nav-btn" onclick="openModal('history-modal')">History</button>
+                <button class="nav-btn" onclick="logout()">Logout</button>
+            </div>
+        </nav>
         <main class="container">
             <header>
                 <div class="logo-container">
@@ -41,15 +65,15 @@
                             </linearGradient>
                         </defs>
                     </svg>
-                    <h1>Gemini Extractor</h1>
+                    <h1>AI Extractor</h1>
                 </div>
-                <p>구글 제미나이 공유 링크에서 대화 내용과 표를 추출하여 엑셀, PPT, 워드에 바로 붙여넣으세요.</p>
+                <p>구글 제미나이와 Chat GPT 공유 링크에서 대화 내용과 표를 추출하여 엑셀, PPT, 워드에 바로 붙여넣으세요.</p>
             </header>
 
             <section class="input-section glass-card">
                 <form id="extract-form">
                     <div class="input-group">
-                        <input type="url" id="url-input" placeholder="https://gemini.google.com/share/..." required>
+                        <input type="url" id="url-input" placeholder="https://gemini.google.com/share/... 또는 https://chatgpt.com/share/..." required>
                         <button type="submit" id="submit-btn">
                             <span>추출하기</span>
                             <div class="spinner" id="loading-spinner"></div>
@@ -102,6 +126,51 @@
                 </div>
             </div>
         </aside>
+    </div>
+
+    <!-- Modals -->
+    <div id="login-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <span class="close-btn" onclick="closeModal('login-modal')">&times;</span>
+            <h2>Sign In</h2>
+            <form id="login-form">
+                <input type="text" id="login-id" class="modal-input" placeholder="아이디" required>
+                <input type="password" id="login-pw" class="modal-input" placeholder="비밀번호 (4자리 숫자)" maxlength="4" pattern="\d{4}" required>
+                <button type="submit" class="modal-btn">Sign In</button>
+            </form>
+            <div id="login-error" class="error hidden"></div>
+        </div>
+    </div>
+
+    <div id="signup-modal" class="modal hidden">
+        <div class="modal-content glass-card">
+            <span class="close-btn" onclick="closeModal('signup-modal')">&times;</span>
+            <h2>회원가입</h2>
+            <form id="signup-form">
+                <div class="id-check-group">
+                    <input type="text" id="signup-id" class="modal-input" placeholder="아이디" required>
+                    <button type="button" id="check-id-btn" class="modal-btn secondary">중복확인</button>
+                </div>
+                <div id="id-check-msg" class="check-msg"></div>
+                <input type="password" id="signup-pw" class="modal-input" placeholder="비밀번호 (4자리 숫자)" maxlength="4" pattern="\d{4}" required>
+                <button type="submit" id="signup-submit-btn" class="modal-btn" disabled>가입하기</button>
+            </form>
+            <div id="signup-error" class="error hidden"></div>
+        </div>
+    </div>
+
+    <div id="history-modal" class="modal hidden">
+        <div class="modal-content glass-card modal-large">
+            <span class="close-btn" onclick="closeModal('history-modal')">&times;</span>
+            <h2>검색 히스토리</h2>
+            <div id="history-content">
+                <p id="history-login-prompt" class="hidden">로그인이 필요한 기능입니다.</p>
+                <table class="history-table hidden" id="history-table">
+                    <thead><tr><th>검색 날짜</th><th>검색 링크 (클릭시 바로시작)</th></tr></thead>
+                    <tbody id="history-tbody"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
