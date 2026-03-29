@@ -316,3 +316,56 @@ button:disabled {
         padding: 1rem;
     }
 }
+
+/* Text Results Section */
+.text-results-section {
+    margin-top: 3rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+}
+
+.text-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: rgba(15, 23, 42, 0.8);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.text-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.text-scroll {
+    overflow-y: auto;
+    max-height: 600px;
+    padding: 1.5rem;
+    background: #ffffff;
+    color: #1a1a1a;
+}
+
+.text-container {
+    white-space: pre-wrap;
+    font-size: 0.95rem;
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.copy-btn.primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border: none;
+    color: white;
+}
+
+.copy-btn.primary:hover {
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    transform: translateY(-1px);
+}
+

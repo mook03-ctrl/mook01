@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsSection = document.getElementById('results-section');
     const tableCount = document.getElementById('table-count');
     const tablesContainer = document.getElementById('tables-container');
+    const textContainer = document.getElementById('text-container');
+    const copyTextBtn = document.getElementById('copy-text-btn');
+    const textResultsSection = document.getElementById('text-results-section');
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -18,6 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setLoading(true);
         resultsSection.classList.add('hidden');
         tablesContainer.innerHTML = '';
+        if (textContainer) textContainer.textContent = '';
+        if (textResultsSection) textResultsSection.classList.add('hidden');
 
         try {
             const response = await fetch('/api/extract', {
@@ -34,13 +39,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || '알 수 없는 오류가 발생했습니다.');
             }
 
-            if (data.count === 0) {
+            if (data.count === 0 && !data.conversation_text) {
                 showError('해당 링크에서 표를 찾을 수 없습니다.');
                 return;
             }
 
-            renderTables(data.tables);
-            tableCount.textContent = data.count;
+            if (data.count > 0) {
+                renderTables(data.tables);
+                tableCount.textContent = data.count;
+            } else {
+                tableCount.textContent = '0';
+            }
+            
+            if (data.conversation_text && data.conversation_text.trim()) {
+                textContainer.textContent = data.conversation_text.trim();
+                textResultsSection.classList.remove('hidden');
+                
+                if (copyTextBtn) {
+                    copyTextBtn.onclick = () => copyPlainTextToClipboard(data.conversation_text.trim(), copyTextBtn);
+                }
+            } else {
+                textResultsSection.classList.add('hidden');
+            }
+
             resultsSection.classList.remove('hidden');
 
             // Scroll to results smoothly
@@ -153,6 +174,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 
             } catch (fallbackErr) {
                 alert('클립보드 복사에 실패했습니다.');
+            }
+        }
+    }
+
+    async function copyPlainTextToClipboard(text, btnElement) {
+        try {
+            await navigator.clipboard.writeText(text);
+            const originalText = btnElement.innerHTML;
+            btnElement.innerHTML = '✓ 복사됨!';
+            btnElement.classList.add('success');
+            setTimeout(() => {
+                btnElement.innerHTML = originalText;
+                btnElement.classList.remove('success');
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy text: ', err);
+            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                
+                const originalText = btnElement.innerHTML;
+                btnElement.innerHTML = '✓ 복사됨! (대체 방법)';
+                btnElement.classList.add('success');
+                setTimeout(() => {
+                    btnElement.innerHTML = originalText;
+                    btnElement.classList.remove('success');
+                }, 2000);
+            } catch (fallbackErr) {
+                alert('텍스트 복사에 실패했습니다.');
             }
         }
     }

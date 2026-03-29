@@ -62,6 +62,15 @@ def extract():
                 
             html_content = page.content()
             page_text = page.evaluate("document.body.innerText")
+            
+            # Get main content text (preferably inside main or article to avoid nav headers)
+            conversation_text = page.evaluate("""
+                () => {
+                    const main = document.querySelector('main') || document.querySelector('article') || document.body;
+                    return main.innerText;
+                }
+            """)
+            
             browser.close()
             
         soup = BeautifulSoup(html_content, 'html.parser')
@@ -69,11 +78,11 @@ def extract():
         # Find all tables
         tables = soup.find_all('table')
         
-        if not tables:
+        if not tables and not conversation_text.strip():
             # Provide debug context to the user so we know what rendering issue occurred
             preview_txt = page_text[:500].replace('\n', ' ') if page_text else "빈 화면"
             return jsonify({
-                "error": f"표를 찾을 수 없습니다. 현재 화면 텍스트: {preview_txt}..."
+                "error": f"내용을 찾을 수 없습니다. 현재 화면 텍스트: {preview_txt}..."
             }), 404
 
         extracted_tables = []
@@ -85,7 +94,8 @@ def extract():
         return jsonify({
             "success": True,
             "tables": extracted_tables,
-            "count": len(extracted_tables)
+            "count": len(extracted_tables),
+            "conversation_text": conversation_text
         })
         
     except Exception as e:

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini Table Extractor</title>
+    <title>Gemini Extractor</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,9 +35,9 @@
                         </linearGradient>
                     </defs>
                 </svg>
-                <h1>Gemini Table Extractor</h1>
+                <h1>Gemini Extractor</h1>
             </div>
-            <p>구글 제미나이 공유 링크에서 표를 추출하여 엑셀이나 PPT에 바로 붙여넣으세요.</p>
+            <p>구글 제미나이 공유 링크에서 대화 내용과 표를 추출하여 엑셀, PPT, 워드에 바로 붙여넣으세요.</p>
         </header>
 
         <section class="input-section glass-card">
@@ -59,6 +59,16 @@
             </header>
             <div id="tables-container" class="tables-container">
                 <!-- Tables will be injected here -->
+            </div>
+            
+            <div id="text-results-section" class="text-results-section">
+                <header class="text-header">
+                    <h2>대화 텍스트 내용</h2>
+                    <button class="copy-btn primary" id="copy-text-btn">전체 내용 복사</button>
+                </header>
+                <div class="text-scroll">
+                    <pre id="text-container" class="text-container"></pre>
+                </div>
             </div>
         </section>
     </main>
