@@ -26,23 +26,22 @@
                     <line x1="3" y1="6" x2="21" y2="6"></line>
                     <line x1="3" y1="18" x2="21" y2="18"></line>
                 </svg>
-                <div class="menu-dropdown hidden"></div>
+                <div class="menu-dropdown hidden" id="menu-dropdown">
+                    <div id="nav-unauth" style="display: none; flex-direction: column;">
+                        <button class="dropdown-item" onclick="openModal('history-modal')">History</button>
+                        <button class="dropdown-item" onclick="openModal('login-modal')">Sign In</button>
+                        <button class="dropdown-item" onclick="openModal('signup-modal')">Sign Up</button>
+                    </div>
+                    <div id="nav-auth" style="display: none; flex-direction: column;">
+                        <button class="dropdown-item" onclick="openModal('history-modal')">History</button>
+                        <button class="dropdown-item" onclick="logout()">Logout</button>
+                    </div>
+                </div>
             </div>
             <div id="welcome-container" style="display: none;">
                 <span id="welcome-msg" class="welcome-text"></span>
             </div>
         </div>
-        <nav class="auth-bar">
-            <div class="nav-links" id="nav-unauth" style="display: none;">
-                <button class="nav-btn" onclick="openModal('history-modal')">History</button>
-                <button class="nav-btn" onclick="openModal('login-modal')">Sign In</button>
-                <button class="nav-btn" onclick="openModal('signup-modal')">Sign Up</button>
-            </div>
-            <div class="nav-links" id="nav-auth" style="display: none;">
-                <button class="nav-btn" onclick="openModal('history-modal')">History</button>
-                <button class="nav-btn" onclick="logout()">Logout</button>
-            </div>
-        </nav>
         <main class="container">
             <header>
                 <div class="logo-container">

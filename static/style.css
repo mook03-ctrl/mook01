@@ -476,35 +476,22 @@ button:disabled {
     z-index: 200;
 }
 
-/* Auth Bar and Navigation */
-.auth-bar {
-    position: absolute;
-    top: 1.5rem;
-    right: 1rem;
-    width: 300px;
-    display: flex;
-    justify-content: center;
-    z-index: 100;
-}
-
-.nav-links {
-    display: flex;
-    gap: 0.8ch;
-    align-items: center;
-}
-
-.nav-btn {
+/* Dropdown Navigation */
+.dropdown-item {
+    display: block;
+    width: 100%;
+    text-align: left;
     background: transparent;
     border: none;
     color: var(--text-primary);
-    padding: 0.25rem 0.1rem;
+    padding: 0.75rem 1.25rem;
     cursor: pointer;
-    font-size: 0.75rem;
-    font-weight: 400;
-    transition: color 0.2s ease;
+    font-size: 0.9rem;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
-.nav-btn:hover {
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.1);
     color: var(--primary-color);
 }
 

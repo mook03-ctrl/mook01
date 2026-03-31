@@ -255,6 +255,23 @@ window.addEventListener('click', (e) => {
     }
 });
 
+// Hamburger menu logic
+const menuIcon = document.querySelector('.menu-icon-wrapper');
+const menuDropdown = document.getElementById('menu-dropdown');
+if (menuIcon && menuDropdown) {
+    menuIcon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menuDropdown.classList.toggle('hidden');
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!menuIcon.contains(e.target)) {
+            menuDropdown.classList.add('hidden');
+        }
+    });
+}
+
 async function checkSession() {
     try {
         const res = await fetch('/api/session');
