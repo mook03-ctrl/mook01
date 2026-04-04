@@ -66,10 +66,18 @@
                     </svg>
                     <h1>AI Extractor</h1>
                 </div>
-                <p>구글 제미나이와 Chat GPT 공유 링크에서 대화 내용과 표를 추출하여 엑셀, PPT, 워드에 바로 붙여넣으세요.</p>
             </header>
 
-            <section class="input-section glass-card">
+            <!-- 탭 네비게이션 -->
+            <div class="tabs-container">
+                <button class="tab-btn active" data-tab="ai-extractor">AI Extractor</button>
+                <button class="tab-btn" data-tab="insta-extractor">Insta Extractor</button>
+            </div>
+
+            <!-- 탭 내용: AI Extractor -->
+            <div id="ai-extractor" class="tab-content active">
+                <section class="input-section glass-card tab-connected-card">
+                    <p class="tab-desc">구글 제미나이와 Chat GPT 공유 링크에서 대화 내용과 표를 추출하여 엑셀, PPT, 워드에 바로 붙여넣으세요.</p>
                 <form id="extract-form">
                     <div class="input-group">
                         <input type="url" id="url-input" placeholder="https://gemini.google.com/share/... 또는 https://chatgpt.com/share/..." required>
@@ -100,6 +108,35 @@
                     </div>
                 </div>
             </section>
+            </div> <!-- End Tab 1 -->
+
+            <!-- 탭 내용: Insta Extractor -->
+            <div id="insta-extractor" class="tab-content">
+                <section class="input-section glass-card tab-connected-card">
+                    <h2 style="font-size: 1.5rem; margin-bottom: 1rem; background: linear-gradient(135deg, #f59e0b, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Insta Extractor</h2>
+                    <p class="tab-desc">인스타그램 아이디를 입력하여 대상 계정의 최신 스토리를 추출하세요</p>
+                    <div style="text-align: right; margin-bottom: 0.8rem;">
+                        <button id="insta-manual-login-btn" type="button" class="modal-btn secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; border-color: rgba(255,255,255,0.2);">🔒 인스타그램 로그인 팝업 활성화</button>
+                    </div>
+                    <form id="insta-form">
+                        <div class="input-group">
+                            <input type="text" id="insta-input" placeholder="인스타그램 아이디 입력 (예: leomessi)" required>
+                            <button type="submit" id="insta-submit-btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); border: none;">
+                                <span>스토리 추출</span>
+                                <div class="spinner" id="insta-loading-spinner"></div>
+                            </button>
+                        </div>
+                    </form>
+                    <div id="insta-error-message" class="error hidden"></div>
+
+                    <div id="insta-results-section" class="hidden" style="margin-top: 2rem;">
+                        <h3 style="margin-bottom: 1rem; color: var(--text-main);">추출된 스토리 (<span id="insta-count">0</span>)</h3>
+                        <div id="insta-gallery" class="insta-gallery-container">
+                            <!-- 스토리가 여기에 갤러리 형태로 삽입됩니다 -->
+                        </div>
+                    </div>
+                </section>
+            </div>
         </main>
 
         <!-- 오른쪽 글로벌 광고 영역 -->
@@ -107,8 +144,6 @@
             <div class="ad-container">
                 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7863183620197765" crossorigin="anonymous"></script>
                 
-                <!-- 나중에 '광고 단위(수직형)'를 만들고 아래 슬롯(data-ad-slot) 번호를 입력한 뒤 주석을 해제하세요. -->
-                <!--
                 <ins class="adsbygoogle"
                      style="display:block"
                      data-ad-client="ca-pub-7863183620197765"
@@ -118,11 +153,6 @@
                 <script>
                      (adsbygoogle = window.adsbygoogle || []).push({});
                 </script>
-                -->
-                <div class="ad-placeholder">
-                    <p>광고 영역</p>
-                    <span>(승인 완료 후 광고 스크립트의 <ins> 주석을 해제하세요)</span>
-                </div>
             </div>
         </aside>
     </div>

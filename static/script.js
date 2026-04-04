@@ -255,6 +255,28 @@ window.addEventListener('click', (e) => {
     }
 });
 
+// Tab Switching Logic
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+if (tabBtns.length > 0) {
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active from all
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+            
+            // Add active to clicked
+            btn.classList.add('active');
+            const targetId = btn.getAttribute('data-tab');
+            const targetContent = document.getElementById(targetId);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+        });
+    });
+}
+
 // Hamburger menu logic
 const menuIcon = document.querySelector('.menu-icon-wrapper');
 const menuDropdown = document.getElementById('menu-dropdown');
@@ -432,6 +454,98 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch(err) {
                 errDiv.textContent = "오류가 발생했습니다.";
                 errDiv.classList.remove('hidden');
+            }
+        };
+    }
+
+    // Insta Extractor Form Logic
+    const instaManualLoginBtn = document.getElementById('insta-manual-login-btn');
+    const instaForm = document.getElementById('insta-form');
+
+    if (instaManualLoginBtn) {
+        instaManualLoginBtn.onclick = async () => {
+            try {
+                const response = await fetch('/api/open_insta_login', { method: 'POST' });
+                const data = await response.json();
+                if (data.success) {
+                    alert('인스타그램 창이 팝업되었습니다. 로그인을 진행해 주세요!\n(이 창을 닫더라도 로그인은 유지됩니다.)');
+                } else {
+                    alert('오류: ' + data.error);
+                }
+            } catch (err) {
+                alert('네트워크 오류가 발생했습니다.');
+            }
+        };
+    }
+    const instaInput = document.getElementById('insta-input');
+    const instaBtnBtn = document.getElementById('insta-submit-btn');
+    const instaSpinner = document.getElementById('insta-loading-spinner');
+    const instaErrorMsg = document.getElementById('insta-error-message');
+    const instaResultsSec = document.getElementById('insta-results-section');
+    const instaGallery = document.getElementById('insta-gallery');
+    const instaCountSpan = document.getElementById('insta-count');
+
+    if (instaForm) {
+        instaForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const targetId = instaInput.value.trim();
+            if (!targetId) return;
+
+            // Reset UI state
+            instaErrorMsg.classList.add('hidden');
+            instaResultsSec.classList.add('hidden');
+            instaGallery.innerHTML = '';
+            instaBtnBtn.disabled = true;
+            instaBtnBtn.querySelector('span').style.opacity = '0.7';
+            instaSpinner.style.display = 'block';
+
+            try {
+                const response = await fetch('/api/extract_insta', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ target_id: targetId })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '알 수 없는 서버 오류가 발생했습니다.');
+                }
+
+                // Render gallery
+                instaCountSpan.textContent = data.media_urls.length;
+                if(data.media_urls.length === 0) {
+                    instaGallery.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">가져올 스토리나 하이라이트가 없습니다.</p>`;
+                } else {
+                    data.media_urls.forEach((item, index) => {
+                        const card = document.createElement('div');
+                        card.className = 'insta-card';
+                        
+                        if(item.is_video) {
+                            card.innerHTML = `
+                                <video src="${item.url}" controls playsinline style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;"></video>
+                                <a href="${item.url}" target="_blank" class="insta-dl-btn" download="insta_video_${index}.mp4">보관</a>
+                            `;
+                        } else {
+                            card.innerHTML = `
+                                <img src="${item.url}" alt="Instagram Story" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" loading="lazy">
+                                <a href="${item.url}" target="_blank" class="insta-dl-btn" download="insta_image_${index}.jpg">보관</a>
+                            `;
+                        }
+                        instaGallery.appendChild(card);
+                    });
+                }
+                instaResultsSec.classList.remove('hidden');
+
+            } catch (err) {
+                instaErrorMsg.textContent = err.message;
+                instaErrorMsg.classList.remove('hidden');
+            } finally {
+                instaBtnBtn.disabled = false;
+                instaBtnBtn.querySelector('span').style.opacity = '1';
+                instaSpinner.style.display = 'none';
             }
         };
     }

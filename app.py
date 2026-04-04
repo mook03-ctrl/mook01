@@ -75,12 +75,34 @@ def extract():
         
     try:
         html_content = ""
+        
+        # 1. Start Native Browser with Remote Debugging to completely bypass anti-bot detections
+        import subprocess
+        import requests
+        import time
+        import os
+        
+        debugger_url = "http://127.0.0.1:9222"
+        try:
+            requests.get(f"{debugger_url}/json/version", timeout=1)
+        except:
+            browser_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+            if not os.path.exists(browser_path):
+                browser_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+            
+            subprocess.Popen([
+                browser_path,
+                "--remote-debugging-port=9222",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--user-data-dir=C:\\temp_extractor_bot_profile"
+            ])
+            time.sleep(3)
+
         with sync_playwright() as p:
-            # Launch chromium in headless mode
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            )
+            # Connect to the actively running real browser over CDP
+            browser = p.chromium.connect_over_cdp(debugger_url)
+            context = browser.contexts[0] if browser.contexts else browser.new_context()
             page = context.new_page()
             
             # Go to Gemini URL and wait for javascript rendering
@@ -241,6 +263,124 @@ def history():
     
     history_list = [{'url': row['url'], 'date': row['search_date']} for row in rows]
     return jsonify({'history': history_list})
+
+@app.route('/api/open_insta_login', methods=['POST'])
+def open_insta_login():
+    import subprocess
+    import os
+    browser_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+    if not os.path.exists(browser_path):
+        browser_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+
+    subprocess.Popen([
+        browser_path,
+        "--remote-debugging-port=9222",
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--user-data-dir=C:\\temp_extractor_bot_profile",
+        "https://www.instagram.com/accounts/login/"
+    ])
+    return jsonify({'success': True})
+
+@app.route('/api/extract_insta', methods=['POST'])
+def extract_insta():
+    target_id = request.json.get('target_id', '').strip().replace('@', '')
+    if not target_id:
+        return jsonify({'error': '인스타그램 아이디를 입력하세요.'}), 400
+
+    import subprocess
+    import requests
+    import time
+    import os
+    from playwright.sync_api import sync_playwright
+    
+    # 1. Ensure MS Edge is running with remote debugging port
+    debugger_url = "http://127.0.0.1:9222"
+    try:
+        requests.get(f"{debugger_url}/json/version", timeout=1)
+    except:
+        browser_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+        if not os.path.exists(browser_path):
+            browser_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+        
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = 0 # SW_HIDE
+
+        subprocess.Popen([
+            browser_path,
+            "--remote-debugging-port=9222",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--user-data-dir=C:\\temp_extractor_bot_profile"
+        ], startupinfo=startupinfo, creationflags=subprocess.CREATE_NO_WINDOW)
+        time.sleep(4) # Give browser time to boot
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.connect_over_cdp(debugger_url)
+            context = browser.contexts[0] if browser.contexts else browser.new_context()
+            page = context.new_page()
+            
+            # Load Instagram Story target URL
+            target_url = f"https://www.instagram.com/stories/{target_id}/"
+            page.goto(target_url, wait_until="networkidle", timeout=30000)
+            page.wait_for_timeout(3000)
+
+            curr_url = page.url
+            if "login" in curr_url:
+                page.close()
+                return jsonify({'error': '팝업된 엣지 브라우저에서 인스타그램 로그인이 필요합니다! 로그인 후 다시 시도해주세요.'}), 401
+            
+            if f"/{target_id}/" in curr_url and "stories" not in curr_url:
+                page.close()
+                return jsonify({'error': '추출 실패'}), 404
+
+            media_urls = []
+            seen_srcs = set()
+
+            # Keyboard interaction loop to scrape stories
+            for _ in range(50): # Max 50 stories safety limit
+                page.wait_for_timeout(1000) # wait for media load
+                
+                video_locators = page.locator("video").element_handles()
+                found_media = False
+                
+                # Look for video src first
+                for v in video_locators:
+                    src = v.get_attribute("src")
+                    if src and "blob:" not in src and src not in seen_srcs:
+                        media_urls.append({'url': src, 'is_video': True, 'type': 'story'})
+                        seen_srcs.add(src)
+                        found_media = True
+                        break
+                
+                if not found_media:
+                    # Look for main story image
+                    img_locators = page.locator("img").element_handles()
+                    for img in img_locators:
+                        src = img.get_attribute("src")
+                        if src and "s150x150" not in src and "s100x100" not in src and src not in seen_srcs:
+                            rect = img.bounding_box()
+                            if rect and rect['width'] > 200 and rect['height'] > 300:
+                                media_urls.append({'url': src, 'is_video': False, 'type': 'story'})
+                                seen_srcs.add(src)
+                                break
+                
+                # Press right arrow to go to the next story
+                page.keyboard.press("ArrowRight")
+                page.wait_for_timeout(1500) # Transition delay
+                
+                # If URL changed to something that is not this user's story, we've reached the end
+                if "stories" not in page.url or target_id not in page.url:
+                    break
+
+            page.close()
+            browser.close()
+            return jsonify({'success': True, 'media_urls': media_urls})
+
+    except Exception as e:
+        return jsonify({'error': f'스토리 추출 실패 (새 창 브라우저를 닫으셨거나 알 수 없는 에러입니다): {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
