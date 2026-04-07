@@ -76,37 +76,13 @@ def extract():
     try:
         html_content = ""
         
-        # 1. Start Native Browser with Remote Debugging to completely bypass anti-bot detections
-        import subprocess
-        import requests
-        import time
-        import os
-        
-        debugger_url = "http://127.0.0.1:9222"
-        try:
-            requests.get(f"{debugger_url}/json/version", timeout=1)
-        except:
-            browser_path = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-            if not os.path.exists(browser_path):
-                browser_path = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-            
-            subprocess.Popen([
-                browser_path,
-                "--remote-debugging-port=9222",
-                "--no-first-run",
-                "--no-default-browser-check",
-                "--user-data-dir=C:\\temp_extractor_bot_profile"
-            ])
-            time.sleep(3)
-
         with sync_playwright() as p:
-            # Connect to the actively running real browser over CDP
-            browser = p.chromium.connect_over_cdp(debugger_url)
-            context = browser.contexts[0] if browser.contexts else browser.new_context()
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context()
             page = context.new_page()
             
             # Go to Gemini URL and wait for javascript rendering
-            page.goto(url, wait_until="domcontentloaded", timeout=40000)
+            page.goto(url, wait_until="networkidle", timeout=60000)
             
             # Auto-scroll page to trigger lazy loading of tables
             page.evaluate("""
