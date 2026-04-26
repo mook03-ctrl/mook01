@@ -1,8 +1,27 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+import { getFirestore, collection, addDoc, onSnapshot, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+// TODO: Replace with your Firebase project configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAJ62tkrMXUUXkV4LRN2GejhIrbOaOugwc",
+  authDomain: "aiextractor-aa809.firebaseapp.com",
+  projectId: "aiextractor-aa809",
+  storageBucket: "aiextractor-aa809.firebasestorage.app",
+  messagingSenderId: "966710872260",
+  appId: "1:966710872260:web:8c1bfc59fe18d1eae9e191",
+  measurementId: "G-LCJ64PVMZ8"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('extract-form');
     const urlInput = document.getElementById('url-input');
     const submitBtn = document.getElementById('submit-btn');
     const errorMessage = document.getElementById('error-message');
+    const statusMessage = document.getElementById('status-message');
     const resultsSection = document.getElementById('results-section');
     const tableCount = document.getElementById('table-count');
     const tablesContainer = document.getElementById('tables-container');
@@ -18,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Reset state
         hideError();
+        hideStatus();
         setLoading(true);
         resultsSection.classList.add('hidden');
         tablesContainer.innerHTML = '';
@@ -25,54 +45,69 @@ document.addEventListener('DOMContentLoaded', () => {
         if (textResultsSection) textResultsSection.classList.add('hidden');
 
         try {
-            const response = await fetch('/api/extract', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ url })
+            // 1. Create a document in Firestore 'requests' collection
+            const docRef = await addDoc(collection(db, "requests"), {
+                url: url,
+                status: 'pending',
+                createdAt: serverTimestamp()
             });
 
-            const data = await response.json();
+            showStatus('요청이 접수되었습니다. 봇이 데이터를 추출하는 중입니다... (최대 5분 소요)');
 
-            if (!response.ok) {
-                throw new Error(data.error || '알 수 없는 오류가 발생했습니다.');
-            }
-
-            if (data.count === 0 && !data.conversation_text) {
-                showError('해당 링크에서 표를 찾을 수 없습니다.');
-                return;
-            }
-
-            if (data.count > 0) {
-                renderTables(data.tables);
-                tableCount.textContent = data.count;
-            } else {
-                tableCount.textContent = '0';
-            }
-            
-            if (data.conversation_text && data.conversation_text.trim()) {
-                textContainer.textContent = data.conversation_text.trim();
-                textResultsSection.classList.remove('hidden');
+            // 2. Listen for real-time updates on this document
+            const unsubscribe = onSnapshot(doc(db, "requests", docRef.id), (documentSnapshot) => {
+                const data = documentSnapshot.data();
                 
-                if (copyTextBtn) {
-                    copyTextBtn.onclick = () => copyPlainTextToClipboard(data.conversation_text.trim(), copyTextBtn);
+                if (data.status === 'completed') {
+                    unsubscribe(); // Stop listening
+                    setLoading(false);
+                    hideStatus();
+                    
+                    if (data.count === 0 && !data.conversation_text) {
+                        showError('해당 링크에서 표나 대화 내용을 찾을 수 없습니다.');
+                        return;
+                    }
+
+                    if (data.count > 0) {
+                        renderTables(data.tables);
+                        tableCount.textContent = data.count;
+                    } else {
+                        tableCount.textContent = '0';
+                    }
+                    
+                    if (data.conversation_text && data.conversation_text.trim()) {
+                        textContainer.textContent = data.conversation_text.trim();
+                        textResultsSection.classList.remove('hidden');
+                        
+                        if (copyTextBtn) {
+                            copyTextBtn.onclick = () => copyPlainTextToClipboard(data.conversation_text.trim(), copyTextBtn);
+                        }
+                    } else {
+                        textResultsSection.classList.add('hidden');
+                    }
+
+                    resultsSection.classList.remove('hidden');
+
+                    // Scroll to results smoothly
+                    setTimeout(() => {
+                        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                    
+                } else if (data.status === 'error') {
+                    unsubscribe(); // Stop listening
+                    setLoading(false);
+                    hideStatus();
+                    showError(data.errorMessage || '추출 중 오류가 발생했습니다.');
                 }
-            } else {
-                textResultsSection.classList.add('hidden');
-            }
-
-            resultsSection.classList.remove('hidden');
-
-            // Scroll to results smoothly
-            setTimeout(() => {
-                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 100);
+            });
 
         } catch (err) {
-            showError(err.message);
-        } finally {
             setLoading(false);
+            if (err.code === 'permission-denied') {
+                showError('Firebase 권한 오류: 데이터베이스 설정 및 규칙을 확인하세요.');
+            } else {
+                showError('오류: ' + err.message);
+            }
         }
     });
 
@@ -104,8 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function copyTableToClipboard(htmlString, btnElement) {
         try {
-            // Create a styled version of the HTML for better Excel/PPT pasting 
-            // We wrap it in a div and add some basic inline CSS that Office applications respect
             const styledHtml = `
                 <html>
                     <body>
@@ -121,7 +154,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const blobHtml = new Blob([styledHtml], { type: 'text/html' });
             
-            // Fallback for plain text
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = htmlString;
             const textContent = tempDiv.innerText;
@@ -134,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
             await navigator.clipboard.write(data);
             
-            // Visual feedback
             const originalText = btnElement.innerHTML;
             btnElement.innerHTML = '✓ 복사됨!';
             btnElement.classList.add('success');
@@ -146,8 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
             
         } catch (err) {
             console.error('Failed to copy text: ', err);
-            
-            // Fallback for older browsers
             try {
                 const tempDiv = document.createElement('div');
                 tempDiv.innerHTML = htmlString;
@@ -231,354 +260,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function hideError() {
         errorMessage.classList.add('hidden');
     }
-});
 
-// Auth and Modal Logic
-let isIdChecked = false;
-let checkedId = '';
-
-function openModal(id) {
-    document.getElementById(id).classList.remove('hidden');
-    if (id === 'history-modal') {
-        loadHistory();
-    }
-}
-
-function closeModal(id) {
-    document.getElementById(id).classList.add('hidden');
-}
-
-// Close modal when clicking outside
-window.addEventListener('click', (e) => {
-    if (e.target.classList.contains('modal')) {
-        closeModal(e.target.id);
-    }
-});
-
-// Tab Switching Logic
-const tabBtns = document.querySelectorAll('.tab-btn');
-const tabContents = document.querySelectorAll('.tab-content');
-
-if (tabBtns.length > 0) {
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Remove active from all
-            tabBtns.forEach(b => b.classList.remove('active'));
-            tabContents.forEach(c => c.classList.remove('active'));
-            
-            // Add active to clicked
-            btn.classList.add('active');
-            const targetId = btn.getAttribute('data-tab');
-            const targetContent = document.getElementById(targetId);
-            if (targetContent) {
-                targetContent.classList.add('active');
-            }
-        });
-    });
-}
-
-// Hamburger menu logic
-const menuIcon = document.querySelector('.menu-icon-wrapper');
-const menuDropdown = document.getElementById('menu-dropdown');
-if (menuIcon && menuDropdown) {
-    menuIcon.addEventListener('click', (e) => {
-        e.stopPropagation();
-        menuDropdown.classList.toggle('hidden');
-    });
-    
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!menuIcon.contains(e.target)) {
-            menuDropdown.classList.add('hidden');
-        }
-    });
-}
-
-async function checkSession() {
-    try {
-        const res = await fetch('/api/session');
-        const data = await res.json();
-        if (data.logged_in) {
-            document.getElementById('nav-unauth').style.display = 'none';
-            document.getElementById('nav-auth').style.display = 'flex';
-            document.getElementById('welcome-container').style.display = 'block';
-            document.getElementById('welcome-msg').textContent = `Welcome, ${data.username}`;
-        } else {
-            document.getElementById('nav-unauth').style.display = 'flex';
-            document.getElementById('nav-auth').style.display = 'none';
-            document.getElementById('welcome-container').style.display = 'none';
-        }
-    } catch (e) {
-        console.error("Session check failed");
-    }
-}
-
-async function logout() {
-    await fetch('/api/logout', { method: 'POST' });
-    checkSession();
-}
-
-// History Logic
-async function loadHistory() {
-    const tbody = document.getElementById('history-tbody');
-    const table = document.getElementById('history-table');
-    const prompt = document.getElementById('history-login-prompt');
-    
-    tbody.innerHTML = '';
-    table.classList.add('hidden');
-    prompt.classList.add('hidden');
-
-    try {
-        const res = await fetch('/api/history');
-        if (res.status === 401) {
-            prompt.textContent = "로그인이 필요한 기능입니다.";
-            prompt.classList.remove('hidden');
-            return;
-        }
-        const data = await res.json();
-        
-        if (data.history && data.history.length > 0) {
-            table.classList.remove('hidden');
-            data.history.forEach(item => {
-                const tr = document.createElement('tr');
-                const tdDate = document.createElement('td');
-                tdDate.textContent = item.date;
-                const tdUrl = document.createElement('td');
-                tdUrl.className = 'url-cell';
-                tdUrl.textContent = item.url;
-                tdUrl.onclick = () => {
-                    closeModal('history-modal');
-                    const urlInput = document.getElementById('url-input');
-                    urlInput.value = item.url;
-                    // Trigger submit manually
-                    const submitEvent = new Event('submit', {
-                        'bubbles': true,
-                        'cancelable': true
-                    });
-                    document.getElementById('extract-form').dispatchEvent(submitEvent);
-                };
-                tr.appendChild(tdDate);
-                tr.appendChild(tdUrl);
-                tbody.appendChild(tr);
-            });
-        } else {
-            prompt.textContent = "저장된 검색 히스토리가 없습니다.";
-            prompt.classList.remove('hidden');
-        }
-    } catch (e) {
-        console.error("History load failed");
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    checkSession();
-
-    // Signup ID Check
-    const checkIdBtn = document.getElementById('check-id-btn');
-    const signupIdInput = document.getElementById('signup-id');
-    const idCheckMsg = document.getElementById('id-check-msg');
-    const signupSubmitBtn = document.getElementById('signup-submit-btn');
-
-    if (checkIdBtn) {
-        checkIdBtn.onclick = async () => {
-            const username = signupIdInput.value.trim();
-            if (!username) {
-                idCheckMsg.textContent = "아이디를 입력해주세요.";
-                idCheckMsg.className = "check-msg error";
-                return;
-            }
-            try {
-                const res = await fetch('/api/check_id', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username })
-                });
-                const data = await res.json();
-                if (data.exists) {
-                    idCheckMsg.textContent = data.msg;
-                    idCheckMsg.className = "check-msg error";
-                    isIdChecked = false;
-                    signupSubmitBtn.disabled = true;
-                } else {
-                    idCheckMsg.textContent = data.msg;
-                    idCheckMsg.className = "check-msg success";
-                    isIdChecked = true;
-                    checkedId = username;
-                    signupSubmitBtn.disabled = false;
-                }
-            } catch(e) {
-                idCheckMsg.textContent = "확인 중 오류가 발생했습니다.";
-                idCheckMsg.className = "check-msg error";
-            }
-        };
+    function showStatus(message) {
+        statusMessage.textContent = message;
+        statusMessage.classList.remove('hidden');
     }
 
-    if (signupIdInput) {
-        signupIdInput.addEventListener('input', () => {
-            if (signupIdInput.value.trim() !== checkedId) {
-                isIdChecked = false;
-                signupSubmitBtn.disabled = true;
-                idCheckMsg.textContent = "";
-            }
-        });
-    }
-
-    // Signup Form
-    const signupForm = document.getElementById('signup-form');
-    if (signupForm) {
-        signupForm.onsubmit = async (e) => {
-            e.preventDefault();
-            if (!isIdChecked) return;
-            const username = signupIdInput.value.trim();
-            const password = document.getElementById('signup-pw').value.trim();
-            const errDiv = document.getElementById('signup-error');
-            errDiv.classList.add('hidden');
-
-            try {
-                const res = await fetch('/api/signup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert("회원가입이 완료되었습니다! 로그인 해주세요.");
-                    closeModal('signup-modal');
-                    e.target.reset();
-                    idCheckMsg.textContent = "";
-                    signupSubmitBtn.disabled = true;
-                } else {
-                    errDiv.textContent = data.error;
-                    errDiv.classList.remove('hidden');
-                }
-            } catch(err) {
-                errDiv.textContent = "오류가 발생했습니다.";
-                errDiv.classList.remove('hidden');
-            }
-        };
-    }
-
-    // Insta Extractor Form Logic
-    const instaManualLoginBtn = document.getElementById('insta-manual-login-btn');
-    const instaForm = document.getElementById('insta-form');
-
-    if (instaManualLoginBtn) {
-        instaManualLoginBtn.onclick = async () => {
-            try {
-                const response = await fetch('/api/open_insta_login', { method: 'POST' });
-                const data = await response.json();
-                if (data.success) {
-                    alert('인스타그램 창이 팝업되었습니다. 로그인을 진행해 주세요!\n(이 창을 닫더라도 로그인은 유지됩니다.)');
-                } else {
-                    alert('오류: ' + data.error);
-                }
-            } catch (err) {
-                alert('네트워크 오류가 발생했습니다.');
-            }
-        };
-    }
-    const instaInput = document.getElementById('insta-input');
-    const instaBtnBtn = document.getElementById('insta-submit-btn');
-    const instaSpinner = document.getElementById('insta-loading-spinner');
-    const instaErrorMsg = document.getElementById('insta-error-message');
-    const instaResultsSec = document.getElementById('insta-results-section');
-    const instaGallery = document.getElementById('insta-gallery');
-    const instaCountSpan = document.getElementById('insta-count');
-
-    if (instaForm) {
-        instaForm.onsubmit = async (e) => {
-            e.preventDefault();
-            const targetId = instaInput.value.trim();
-            if (!targetId) return;
-
-            // Reset UI state
-            instaErrorMsg.classList.add('hidden');
-            instaResultsSec.classList.add('hidden');
-            instaGallery.innerHTML = '';
-            instaBtnBtn.disabled = true;
-            instaBtnBtn.querySelector('span').style.opacity = '0.7';
-            instaSpinner.style.display = 'block';
-
-            try {
-                const response = await fetch('/api/extract_insta', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ target_id: targetId })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || '알 수 없는 서버 오류가 발생했습니다.');
-                }
-
-                // Render gallery
-                instaCountSpan.textContent = data.media_urls.length;
-                if(data.media_urls.length === 0) {
-                    instaGallery.innerHTML = `<p style="grid-column: 1 / -1; text-align: center; padding: 2rem; color: var(--text-muted);">가져올 스토리나 하이라이트가 없습니다.</p>`;
-                } else {
-                    data.media_urls.forEach((item, index) => {
-                        const card = document.createElement('div');
-                        card.className = 'insta-card';
-                        
-                        if(item.is_video) {
-                            card.innerHTML = `
-                                <video src="${item.url}" controls playsinline style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;"></video>
-                                <a href="${item.url}" target="_blank" class="insta-dl-btn" download="insta_video_${index}.mp4">보관</a>
-                            `;
-                        } else {
-                            card.innerHTML = `
-                                <img src="${item.url}" alt="Instagram Story" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;" loading="lazy">
-                                <a href="${item.url}" target="_blank" class="insta-dl-btn" download="insta_image_${index}.jpg">보관</a>
-                            `;
-                        }
-                        instaGallery.appendChild(card);
-                    });
-                }
-                instaResultsSec.classList.remove('hidden');
-
-            } catch (err) {
-                instaErrorMsg.textContent = err.message;
-                instaErrorMsg.classList.remove('hidden');
-            } finally {
-                instaBtnBtn.disabled = false;
-                instaBtnBtn.querySelector('span').style.opacity = '1';
-                instaSpinner.style.display = 'none';
-            }
-        };
-    }
-
-    // Login Form
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.onsubmit = async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('login-id').value.trim();
-            const password = document.getElementById('login-pw').value.trim();
-            const errDiv = document.getElementById('login-error');
-            errDiv.classList.add('hidden');
-
-            try {
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    closeModal('login-modal');
-                    e.target.reset();
-                    checkSession();
-                } else {
-                    errDiv.textContent = data.error;
-                    errDiv.classList.remove('hidden');
-                }
-            } catch(err) {
-                errDiv.textContent = "오류가 발생했습니다.";
-                errDiv.classList.remove('hidden');
-            }
-        };
+    function hideStatus() {
+        statusMessage.classList.add('hidden');
     }
 });
