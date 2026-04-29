@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "AI Extractor",
+    "slug": "ai-extractor",
+    "scheme": "conversation-coach",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.conversationcoach.app"
+    },
+    "android": {
+      "package": "com.conversationcoach.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-dev-client",
+      "expo-pip",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "대화를 인식하려면 마이크 접근이 필요합니다.",
+          "speechRecognitionPermission": "실시간 자막과 추천 대답을 위해 음성 인식 권한이 필요합니다.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox",
+            "com.google.android.as"
+          ]
+        }
+      ]
+    ]
+  }
+}
